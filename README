@@ -1,0 +1,16 @@
+#
+
+A tensor is a technical term for a multi-dimentional array.
+Any network you find will have one or more input tensors and one or more output tensors.
+Before .., the input tensor of a network needs to be filled with data. When invoked, the data is processed by the neural network and the output tensor is filled with the result. This can then be copied out and used.
+
+# Converting
+
+import tensorflow as tf
+m = tf.keras.models.load_model('best_model.h5')
+converter = tf.lite.TFLiteConverter.from_keras_model(m)
+tflite_model = converter.convert()
+open("mnist.tflite", "wb").write(tflite_model)
+
+
+Weights come from here: https://www.kaggle.com/josephassaker/cnn-mnist-digit-classification/output?select=best_model.hdf5
