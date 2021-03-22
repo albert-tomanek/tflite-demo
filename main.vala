@@ -89,7 +89,7 @@ class DemoWindow : Gtk.Window
 	Gtk.Button[] number_buttons = new Gtk.Button[10];
 	CanvasWidget canvas;
 
-	TFLite.Interpreter? intrp = null;
+	// TFLite.Interpreter? intrp = null;
 
 	public DemoWindow()
 	{
@@ -152,17 +152,17 @@ class DemoWindow : Gtk.Window
 
 	public void load_model()
 	{
-		var model = TFLite.Model.from_file("mnist.tflite"); // warning: can be null
-
-		if (model != null)
-		{
-			this.intrp = new TFLite.Interpreter(model, null);
-			this.intrp.allocate_tensors();
-
-			/* Check the model takes the format we want. */
-			assert(intrp.get_input_tensor(0).type == TFLite.TensorType.Float32);
-		}
-		else
+		// var model = TFLite.Model.from_file("mnist.tflite"); // warning: can be null
+		//
+		// if (model != null)
+		// {
+		// 	this.intrp = new TFLite.Interpreter(model, null);
+		// 	this.intrp.allocate_tensors();
+		//
+		// 	/* Check the model takes the format we want. */
+		// 	assert(intrp.get_input_tensor(0).type == TFLite.TensorType.Float32);
+		// }
+		// else
 		{
 			var dialog = new Gtk.MessageDialog(this, Gtk.DialogFlags.MODAL, Gtk.MessageType.ERROR, Gtk.ButtonsType.CLOSE, null) {
 				text = "Error loading model",
@@ -175,37 +175,37 @@ class DemoWindow : Gtk.Window
 
 	void predict()
 	{
-		if (this.intrp == null) return;
-
-		var img = this.canvas.get_image();
-		img = img.scale_simple(28, 28, Gdk.InterpType.BILINEAR);
-//      img.save("/tmp/img.png","png");
-
-		/* Unfortunately Gdk doesn't have any methods to get grayscale data
-		 * so we have to convert the data ourselves.                        */
-
-		var data = new float[28 * 28];
-		var img_bytes = img.read_pixel_bytes();
-		for (int i = 0; i < img_bytes.length; i++)
-		{
-			if (i % 3 == 0)     // only read red channel
-			{
-				data[i / 3] = ((float) img_bytes[i]) / 255;     // convert from int range [0,255] to float range [0,1]
-				data[i / 3] = 1 - data[i / 3];                  // invert the image. network expects white writing on black background.
-			}
-		}
-
-		/* Do the guessing */
-		intrp.get_input_tensor(0).copy_from_buffer((uint8[]) data);		// Fill input tensor
-		intrp.invoke();													// Do computation
-
-		var prediction = new float[10];
-		intrp.get_output_tensor(0).copy_to_buffer(prediction, 10 * sizeof(float));
-
-		for (int i = 0; i < prediction.length; i++)
-		{
-			this.number_buttons[i].opacity = prediction[i];
-		}
+// 		if (this.intrp == null) return;
+//
+// 		var img = this.canvas.get_image();
+// 		img = img.scale_simple(28, 28, Gdk.InterpType.BILINEAR);
+// //      img.save("/tmp/img.png","png");
+//
+// 		/* Unfortunately Gdk doesn't have any methods to get grayscale data
+// 		 * so we have to convert the data ourselves.                        */
+//
+// 		var data = new float[28 * 28];
+// 		var img_bytes = img.read_pixel_bytes();
+// 		for (int i = 0; i < img_bytes.length; i++)
+// 		{
+// 			if (i % 3 == 0)     // only read red channel
+// 			{
+// 				data[i / 3] = ((float) img_bytes[i]) / 255;     // convert from int range [0,255] to float range [0,1]
+// 				data[i / 3] = 1 - data[i / 3];                  // invert the image. network expects white writing on black background.
+// 			}
+// 		}
+//
+// 		/* Do the guessing */
+// 		intrp.get_input_tensor(0).copy_from_buffer((uint8[]) data);		// Fill input tensor
+// 		intrp.invoke();													// Do computation
+//
+// 		var prediction = new float[10];
+// 		intrp.get_output_tensor(0).copy_to_buffer(prediction, 10 * sizeof(float));
+//
+// 		for (int i = 0; i < prediction.length; i++)
+// 		{
+// 			this.number_buttons[i].opacity = prediction[i];
+// 		}
 	}
 }
 
@@ -213,7 +213,7 @@ int main(string[] args)
 {
 	Gtk.init(ref args);
 
-	message("TensorFlow version: %s", TFLite.version());
+	// message("TensorFlow version: %s", TFLite.version());
 
 	var window = new DemoWindow() {
 		resizable = false

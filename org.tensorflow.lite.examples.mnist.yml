@@ -1,0 +1,21 @@
+id: org.tensorflow.lite.examples.mnist
+runtime: org.gnome.Platform
+runtime-version: '3.38'
+sdk: org.gnome.Sdk
+command: main
+finish-args:
+  - --socket=x11
+  - --socket=wayland
+  - --share=ipc
+modules:
+  - name: demo
+    buildsystem: simple
+    build-commands:
+      - valac main.vala --pkg gtk+-3.0
+      - install -D main         /app/bin/main
+      - install -D mnist.tflite /app/bin/mnist.tflite
+    sources:
+      - type: file
+        path: main.vala
+      - type: file
+        path: mnist.tflite
