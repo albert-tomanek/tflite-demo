@@ -1,4 +1,4 @@
-/* Compile: valac main.vala tflite.vapi --pkg gtk+-3.0 -X -ltensorflowlite_c */
+/* Compile: valac main.vala --pkg gtk+-3.0 --pkg tflite */
 
 class CanvasWidget : Gtk.DrawingArea
 {
@@ -91,14 +91,10 @@ class DemoWindow : Gtk.Window
 
 	TFLite.Interpreter? intrp = null;
 
-	Gtk.CssProvider custom_style = new Gtk.CssProvider();
-
 	public DemoWindow()
 	{
 		this.destroy.connect(Gtk.main_quit);
 		this.build_ui();
-
-		Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), this.custom_style, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
 	}
 
 	private void build_ui()
@@ -144,7 +140,6 @@ class DemoWindow : Gtk.Window
 		{
 			Gtk.Button button = new Gtk.Button() {
 				label = (@"$i"),
-				name  = (@"label-$i"),		// Used to refer to the button in CSS
 				halign = Gtk.Align.CENTER
 			};
 			button.get_style_context().add_class("circular");
@@ -201,28 +196,16 @@ class DemoWindow : Gtk.Window
 		}
 
 		/* Do the guessing */
-		intrp.get_input_tensor(0).copy_from_buffer((uint8[]) data);
-		intrp.invoke();
+		intrp.get_input_tensor(0).copy_from_buffer((uint8[]) data);		// Fill input tensor
+		intrp.invoke();													// Do computation
 
 		var prediction = new float[10];
 		intrp.get_output_tensor(0).copy_to_buffer(prediction, 10 * sizeof(float));
 
-		this.set_colors(prediction);
-	}
-
-	void set_colors(float[] intensities)
-	{
-		string style = "";
-
-		for (int i = 0; i < intensities.length; i++)
+		for (int i = 0; i < prediction.length; i++)
 		{
-			float n = intensities[i];
-			// style += @"#label-$i { background: rgba(31,115,206,$(0.5 * n)) }\n";
-			this.number_buttons[i].opacity = n;
+			this.number_buttons[i].opacity = prediction[i];
 		}
-
-		this.custom_style.load_from_data(style);
-		Gtk.StyleContext.reset_widgets(Gdk.Screen.get_default());
 	}
 }
 
