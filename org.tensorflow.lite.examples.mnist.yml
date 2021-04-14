@@ -7,11 +7,28 @@ finish-args:
   - --socket=x11
   - --socket=wayland
   - --share=ipc
+add-build-extensions:
+  - org.freedesktop.Sdk.Extension.bazel
+build-options:
+  append-path: /usr/lib/sdk/bazel/bin
 modules:
+  - name: tflite
+    buildsystem: simple
+    builddir: true
+    build-commands:
+      - ./build.sh
+      - rm -r package/DEBIAN
+      - cp -RT package/ ${FLATPAK_DEST}/    # Merge directory structure in package into root directory structure
+    sources:
+      - type: git
+        url: https://github.com/tensorflow/tensorflow
+        dest: tensorflow
+      - type: git
+        url: https://github.com/albert-tomanek/tflite-package
   - name: demo
     buildsystem: simple
     build-commands:
-      - valac main.vala --pkg gtk+-3.0
+      - valac main.vala --pkg gtk+-3.0 --pkg tflite
       - install -D main         /app/bin/main
       - install -D mnist.tflite /app/bin/mnist.tflite
     sources:

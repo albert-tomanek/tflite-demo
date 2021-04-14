@@ -1,5 +1,148 @@
 /* Compile: valac main.vala --pkg gtk+-3.0 --pkg tflite */
 
+int main(string[] args)
+{
+	Gtk.init(ref args);
+
+	message("TensorFlow version: %s", TFLite.version());
+
+	var window = new DemoWindow() {
+		resizable = false
+	};
+	window.show_all();
+	window.load_model();
+
+	Gtk.main();
+
+	return 0;
+}
+
+class DemoWindow : Gtk.Window
+{
+	Gtk.Button[] number_buttons = new Gtk.Button[10];
+	CanvasWidget canvas;
+
+	TFLite.Interpreter? intrp = null;
+
+	public DemoWindow()
+	{
+		this.destroy.connect(Gtk.main_quit);
+		this.build_ui();
+	}
+
+	private void build_ui()
+	{
+		var vbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 16) {
+			margin = 12
+		};
+		this.add(vbox);
+
+		/* Build headerbar */
+
+		var hb = new Gtk.HeaderBar() {
+			title = "TensorFlow demo",
+			show_close_button = true
+		};
+
+		this.set_titlebar(hb);
+
+		var clear_button = new Gtk.Button.with_label("Clear");
+		clear_button.clicked.connect(() => {
+			this.canvas.clear();
+		});
+		hb.add(clear_button);
+
+		/* Build canvas */
+
+		this.canvas = new CanvasWidget();
+		this.canvas.changed.connect(() => {
+			this.predict();
+		});
+		vbox.add(this.canvas);
+
+		/* Create indicators */
+
+		var grid = new Gtk.Grid() {
+			row_spacing = 12,
+			column_spacing = 12,
+			hexpand = true,
+			column_homogeneous = true
+		};
+		vbox.add(grid);
+
+		for (int i = 0; i < 10; i++)
+		{
+			Gtk.Button button = new Gtk.Button() {
+				label = (@"$i"),
+				halign = Gtk.Align.CENTER
+			};
+			button.get_style_context().add_class("circular");
+			button.button_press_event.connect(() => { return true; });
+
+			grid.attach(button, i % 5, i / 5);
+			this.number_buttons[i] = button;
+		}
+	}
+
+	public void load_model()
+	{
+		var model = TFLite.Model.from_file("mnist.tflite"); // warning: can be null
+
+		if (model != null)
+		{
+			this.intrp = new TFLite.Interpreter(model, null);
+			this.intrp.allocate_tensors();
+
+			/* Check the model takes the format we want. */
+			assert(intrp.get_input_tensor(0).type == TFLite.TensorType.Float32);
+		}
+		else
+		{
+			var dialog = new Gtk.MessageDialog(this, Gtk.DialogFlags.MODAL, Gtk.MessageType.ERROR, Gtk.ButtonsType.CLOSE, null) {
+				text = "Error loading model",
+				secondary_text = "A problem occured whilst loading the TensorFlow Lite model."
+			};
+			dialog.response.connect(() => { dialog.destroy(); });
+			dialog.run();
+		}
+	}
+
+	void predict()
+	{
+		if (this.intrp == null) return;
+
+		var img = this.canvas.get_image();
+		img = img.scale_simple(28, 28, Gdk.InterpType.BILINEAR);
+//      img.save("/tmp/img.png","png");
+
+		/* Unfortunately Gdk doesn't have any methods to get grayscale data
+		 * so we have to convert the data ourselves.                        */
+
+		var data = new float[28 * 28];
+		var img_bytes = img.read_pixel_bytes();
+		for (int i = 0; i < img_bytes.length; i++)
+		{
+			if (i % 3 == 0)     // skip everything except red channel
+			{
+				data[i / 3] = ((float) img_bytes[i]) / 255;     // convert from int range [0,255] to float range [0,1]
+				data[i / 3] = 1 - data[i / 3];                  // invert the image. network expects white writing on black background.
+			}
+		}
+
+		/* Do the guessing */
+		intrp.get_input_tensor(0).copy_from_buffer((uint8[]) data);		// Fill input tensor. The network expects 784 floats (the greyscale image) as input.
+		intrp.invoke();													// Do computation
+
+		var prediction = new float[10];
+		intrp.get_output_tensor(0).copy_to_buffer(prediction, 10 * sizeof(float));		// The output of the network are 10 floats, one for each possible digit, with each one being the probability [0, 1] that this is the digit drawn in the picture.
+
+		for (int i = 0; i < prediction.length; i++)
+		{
+			this.number_buttons[i].opacity = prediction[i];
+		}
+	}
+}
+
 class CanvasWidget : Gtk.DrawingArea
 {
 	private Array<Array<Gdk.Point?>> paths = new Array<Array<Gdk.Point?>>();
@@ -82,146 +225,4 @@ class CanvasWidget : Gtk.DrawingArea
 		this.queue_draw();
 		this.changed();
 	}
-}
-
-class DemoWindow : Gtk.Window
-{
-	Gtk.Button[] number_buttons = new Gtk.Button[10];
-	CanvasWidget canvas;
-
-	// TFLite.Interpreter? intrp = null;
-
-	public DemoWindow()
-	{
-		this.destroy.connect(Gtk.main_quit);
-		this.build_ui();
-	}
-
-	private void build_ui()
-	{
-		var vbox = new Gtk.Box(Gtk.Orientation.VERTICAL, 16) {
-			margin = 12
-		};
-		this.add(vbox);
-
-		/* Build headerbar */
-
-		var hb = new Gtk.HeaderBar() {
-			title = "TensorFlow demo",
-			show_close_button = true
-		};
-
-		this.set_titlebar(hb);
-
-		var clear_button = new Gtk.Button.with_label("Clear");
-		clear_button.clicked.connect(() => {
-			this.canvas.clear();
-		});
-		hb.add(clear_button);
-
-		/* Build canvas */
-		this.canvas = new CanvasWidget();
-		this.canvas.changed.connect(() => {
-			this.predict();
-		});
-		vbox.add(this.canvas);
-
-		/* Create indicators */
-
-		var grid = new Gtk.Grid() {
-			row_spacing = 12,
-			column_spacing = 12,
-			hexpand = true,
-			column_homogeneous = true
-		};
-		vbox.add(grid);
-
-		for (int i = 0; i < 10; i++)
-		{
-			Gtk.Button button = new Gtk.Button() {
-				label = (@"$i"),
-				halign = Gtk.Align.CENTER
-			};
-			button.get_style_context().add_class("circular");
-			button.button_press_event.connect(() => { return true; });
-
-			grid.attach(button, i % 5, i / 5);
-			this.number_buttons[i] = button;
-		}
-	}
-
-	public void load_model()
-	{
-		// var model = TFLite.Model.from_file("mnist.tflite"); // warning: can be null
-		//
-		// if (model != null)
-		// {
-		// 	this.intrp = new TFLite.Interpreter(model, null);
-		// 	this.intrp.allocate_tensors();
-		//
-		// 	/* Check the model takes the format we want. */
-		// 	assert(intrp.get_input_tensor(0).type == TFLite.TensorType.Float32);
-		// }
-		// else
-		{
-			var dialog = new Gtk.MessageDialog(this, Gtk.DialogFlags.MODAL, Gtk.MessageType.ERROR, Gtk.ButtonsType.CLOSE, null) {
-				text = "Error loading model",
-				secondary_text = "A problem occured whilst loading the TensorFlow Lite model."
-			};
-			dialog.response.connect(() => { dialog.destroy(); });
-			dialog.run();
-		}
-	}
-
-	void predict()
-	{
-// 		if (this.intrp == null) return;
-//
-// 		var img = this.canvas.get_image();
-// 		img = img.scale_simple(28, 28, Gdk.InterpType.BILINEAR);
-// //      img.save("/tmp/img.png","png");
-//
-// 		/* Unfortunately Gdk doesn't have any methods to get grayscale data
-// 		 * so we have to convert the data ourselves.                        */
-//
-// 		var data = new float[28 * 28];
-// 		var img_bytes = img.read_pixel_bytes();
-// 		for (int i = 0; i < img_bytes.length; i++)
-// 		{
-// 			if (i % 3 == 0)     // only read red channel
-// 			{
-// 				data[i / 3] = ((float) img_bytes[i]) / 255;     // convert from int range [0,255] to float range [0,1]
-// 				data[i / 3] = 1 - data[i / 3];                  // invert the image. network expects white writing on black background.
-// 			}
-// 		}
-//
-// 		/* Do the guessing */
-// 		intrp.get_input_tensor(0).copy_from_buffer((uint8[]) data);		// Fill input tensor
-// 		intrp.invoke();													// Do computation
-//
-// 		var prediction = new float[10];
-// 		intrp.get_output_tensor(0).copy_to_buffer(prediction, 10 * sizeof(float));
-//
-// 		for (int i = 0; i < prediction.length; i++)
-// 		{
-// 			this.number_buttons[i].opacity = prediction[i];
-// 		}
-	}
-}
-
-int main(string[] args)
-{
-	Gtk.init(ref args);
-
-	// message("TensorFlow version: %s", TFLite.version());
-
-	var window = new DemoWindow() {
-		resizable = false
-	};
-	window.show_all();
-	window.load_model();
-
-	Gtk.main();
-
-	return 0;
 }
