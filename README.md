@@ -1,6 +1,8 @@
-#
+![](screenshot.png)
 
-# Using a neural network in your app
+This small app aims to demonstrate how machine learning can be integrated into desktop Linux applications.
+
+### Using a neural network in your app
 
 Neural networks are numerical models which take an array of numbers as an input, and produce an array of numbers as an output.
 In machine learning, the technical term for such an array is a 'tensor'. Tensors usually have more than 1 dimensions.
@@ -10,11 +12,14 @@ A tensor is a technical term for a multi-dimentional array.
 Any network you find will have one or more input tensors and one or more output tensors.
 Before .., the input tensor of a network needs to be filled with data. When invoked, the data is processed by the neural network and the output tensor is filled with the result. This can then be copied out and used.
 
-# Converting h5 files for use with TFLite
+### Using pre-trained models
+Models for doing common tasks already exist online and you can download and use them directly in your program. In cases where models work on something else than numerical data, you may have to do some preprocessing yourself.
 
-Many pre-trained models are available on sites like http://www.modelzoo.co/.
+### Converting h5 files for use with TFLite
 
-To convert a model saved as a .h5 file to TfLite's format, enter the following commands into Python:
+Many pre-trained models are available on sites like [ModelZoo](http://www.modelzoo.co/) or the [TensorFlow Hub](https://tfhub.dev/).
+
+To convert a model saved as a .h5 file to TFLite's format, enter the following commands into Python:
 
 	import tensorflow as tf
 	m = tf.keras.models.load_model('mnist.h5')

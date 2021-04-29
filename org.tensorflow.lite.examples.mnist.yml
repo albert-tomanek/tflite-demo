@@ -12,35 +12,27 @@ add-build-extensions:
 build-options:
   append-path: /usr/lib/sdk/bazel/bin
 modules:
-  - name: tflite
-    build-options:
-      build-args:
-        - --share=network           # Bazel downloads some things when building tflite. Also, build.sh uses `git clone` to download the latest tensorflow.
-    buildsystem: simple
-    build-commands:
-      - pip3 install pip numpy wheel --prefix=/app                  # Dunno why these are required by bazel to build a C binary 🤷 https://www.tensorflow.org/install/source
-      - pip3 install keras_preprocessing --no-deps --prefix=/app
-      - ./build.sh
-      - rm -r package/DEBIAN    # The build script is intended to create a debian package. We don't need package metadata so we remove it.
-      - mv package/usr/lib package/         # Flatpak apps seem to have libraries in /app/lib rather than /app/user/lib
-      - cp -RT package/ ${FLATPAK_DEST}/    # Merge directory structure from the debian package into the runtime (and build..? :-/) environment (`package/` contains directories like usr/, lib/, etc.)
-    sources:
-      - type: git
-        url: https://github.com/albert-tomanek/tflite-package
+  - tflite.yml
   - name: demo
     buildsystem: simple
     build-commands:
-      - valac main.vala --pkg gtk+-3.0 --pkg tflite --vapidir ${FLATPAK_DEST}/usr/share/vala/vapi -X -I/app/usr/include -X -L/app/lib
+      - valac main.vala --pkg gtk+-3.0 --pkg tflite --vapidir /app/usr/share/vala/vapi -X -I/app/usr/include -X -L/app/lib
+
       - install -D main         /app/bin/main
       - install -D mnist.tflite /app/bin/mnist.tflite
-      - echo "#!/bin/sh                 " >> /app/bin/run_main.sh
-      - echo "main /app/bin/mnist.tflite" >> /app/bin/run_main.sh
-      - chmod +x /app/bin/run_main.sh
-      - ls -l /app/bin
+
     sources:
       - type: file
         path: main.vala
       - type: file
         path: mnist.tflite
-      # - type: file
-      #   path: meson.build
+  # We need to create a shell script to start our app because we need to pass it a commandline argument and flatpak-builder doesn't support this.
+  - name: run_script
+    sources:
+      - type: script
+        commands:
+          - main /app/bin/mnist.tflite
+        dest-filename: run_main.sh
+    buildsystem: simple
+    build-commands:
+      - cp run_main.sh /app/bin/

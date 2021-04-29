@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<application>
+  <id>org.tensorflow.lite.examples.mnist</id>
+  <name>TensorFlow Lite demo</name>
+  <summary>Example application using the TensorFlow Lite machine learning library.</summary>
+  <url type="homepage">https://github.com/albert-tomanek/tflite-demo</url>
+  <metadata_license>CC0-1.0</metadata_license>
+</application>

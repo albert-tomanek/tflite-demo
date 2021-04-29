@@ -1,0 +1,23 @@
+# When using this module, the following needs to be added to the manifest:
+#
+#    add-build-extensions:
+#      - org.freedesktop.Sdk.Extension.bazel
+#    build-options:
+#      append-path: /usr/lib/sdk/bazel/bin
+#
+
+name: tflite
+build-options:
+  build-args:
+    - --share=network           # Bazel downloads some things when building tflite. Also, build.sh uses `git clone` to download the latest tensorflow.
+buildsystem: simple
+build-commands:
+  - pip3 install pip numpy wheel --prefix=/app                  # Dunno why these are required by bazel to build a C binary 🤷 https://www.tensorflow.org/install/source
+  - pip3 install keras_preprocessing --no-deps --prefix=/app
+  - ./build.sh
+  - rm -r package/DEBIAN    			# The build script is intended to create a debian package. We don't need package metadata so we remove it.
+  - mv package/usr/lib package/         # Flatpak apps seem to have libraries in /app/lib rather than /app/user/lib
+  - cp -RT package/ ${FLATPAK_DEST}/    # Merge directory structure from the debian package into the runtime (and build..? :-/) environment (`package/` contains directories like usr/, lib/, etc.)
+sources:
+  - type: git
+    url: https://github.com/albert-tomanek/tflite-package
