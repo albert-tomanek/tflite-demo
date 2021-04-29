@@ -10,7 +10,9 @@ int main(string[] args)
 		resizable = false
 	};
 	window.show_all();
-	window.load_model();
+
+	var model_path = (args.length == 2) ? args[1] : null;
+	window.load_model(model_path);
 
 	Gtk.main();
 
@@ -84,9 +86,9 @@ class DemoWindow : Gtk.Window
 		}
 	}
 
-	public void load_model()
+	public void load_model(string? path = null)
 	{
-		var model = TFLite.Model.from_file("mnist.tflite"); // warning: can be null
+		var model = TFLite.Model.from_file(path ?? "mnist.tflite"); 	// warning: can be null
 
 		if (model != null)
 		{
