@@ -88,7 +88,7 @@ class DemoWindow : Gtk.Window
 
 	public void load_model(string? path = null)
 	{
-		var model = TFLite.Model.from_file(path ?? "mnist.tflite"); 	// warning: can be null
+		var model = TFLite.Model.from_file(path ?? "mnist.tflite"); 	// warning: can return null
 
 		if (model != null)
 		{
